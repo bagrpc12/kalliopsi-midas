@@ -2,7 +2,6 @@ import os
 import torch
 import requests
 import zipfile
-import midas_utils
 
 # URL του μοντέλου από Hugging Face
 HF_MODEL_URL = "https://huggingface.co/Intel/dpt-swinv2-tiny-256/resolve/main/pytorch_model.bin"
@@ -30,3 +29,4 @@ def load_midas_model(path, device):
     model.to(device)
     model.eval()
     return model
+
