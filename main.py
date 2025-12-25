@@ -9,7 +9,7 @@ import torch
 import torchvision.transforms as T
 import os
 
-from model_utils import load_midas_model, get_model_path, ensure_model
+from model_utils import load_midas_model, ensure_model
 
 app = FastAPI(title="Kalliopsi MiDaS API")
 
@@ -51,3 +51,4 @@ async def depth(file: UploadFile):
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
