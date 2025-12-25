@@ -5,7 +5,7 @@ import zipfile
 
 # URL του μοντέλου από Hugging Face
 HF_MODEL_URL = "URL = "https://huggingface.co/intel-isl/MiDaS/resolve/main/dpt_hybrid-d0508457.pt"
-MODEL_FILENAME = "dpt-swinv2-tiny-256.pt"
+MODEL_FILENAME = "dpt_hybrid-d0508457.pt"
 CACHE_DIR = "/tmp/midas_models"
 
 def ensure_model():
@@ -29,5 +29,6 @@ def load_midas_model(path, device):
     model.to(device)
     model.eval()
     return model
+
 
 
