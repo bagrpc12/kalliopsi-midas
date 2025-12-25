@@ -1,16 +1,19 @@
 import os
 import torch
 import requests
-import zipfile
 
 # URL του μοντέλου από Hugging Face
-HF_MODEL_URL =  "https://huggingface.co/intel-isl/MiDaS/resolve/main/dpt_hybrid-d0508457.pt"
+HF_MODEL_URL = "https://huggingface.co/intel-isl/MiDaS/resolve/main/dpt_hybrid-d0508457.pt"
 MODEL_FILENAME = "dpt_hybrid-d0508457.pt"
 CACHE_DIR = "/tmp/midas_models"
+
+# Τελική διαδρομή για το αρχείο μοντέλου
+MODEL_PATH = os.path.join(CACHE_DIR, MODEL_FILENAME)
 
 def ensure_model():
     if not os.path.exists(MODEL_PATH):
         print("Downloading MiDaS model...")
+        os.makedirs(CACHE_DIR, exist_ok=True)
         headers = {}
         hf_token = os.getenv("HF_TOKEN")
         if hf_token:
@@ -29,8 +32,3 @@ def load_midas_model(path, device):
     model.to(device)
     model.eval()
     return model
-
-
-
-
-
