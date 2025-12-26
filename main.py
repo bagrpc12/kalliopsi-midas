@@ -8,6 +8,10 @@ import io
 
 app = FastAPI()
 
+@app.get("/healthz")
+def healthz():
+    return {"status": "ok"}
+
 MODEL = None
 
 def get_model():
@@ -46,3 +50,4 @@ async def depth_estimation(file: UploadFile = File(...)):
 
     _, buffer = cv2.imencode(".png", depth)
     return buffer.tobytes()
+
