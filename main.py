@@ -1,27 +1,18 @@
 from fastapi import FastAPI, UploadFile, File
-from PIL import Image
-import io
-import numpy as np
-
-from model_utils import predict_depth
+from model_utils import load_midas_model, predict_depth
 
 app = FastAPI()
 
+# 🔥 GLOBAL MODEL (φορτώνεται ΜΙΑ ΦΟΡΑ)
+model, transform = None, None
 
-@app.get("/")
-def root():
-    return {"status": "ok"}
-
+@app.on_event("startup")
+def startup_event():
+    global model, transform
+    model, transform = load_midas_model()
 
 @app.post("/depth")
 async def depth_estimation(file: UploadFile = File(...)):
     image_bytes = await file.read()
-    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-
-    depth = predict_depth(image)
-
-    return {
-        "depth_shape": depth.shape,
-        "depth_min": float(depth.min()),
-        "depth_max": float(depth.max()),
-    }
+    depth = predict_depth(image_bytes, model, transform)
+    return {"depth": depth}
