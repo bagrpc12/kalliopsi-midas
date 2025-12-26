@@ -1,47 +1,72 @@
-import os
 import torch
-import requests
 from midas.dpt_depth import DPTDepthModel
 from midas.transforms import Resize, NormalizeImage, PrepareForNet
 import cv2
 import numpy as np
+from torchvision.transforms import Compose
 
-HF_MODEL_URL = (
-    "https://huggingface.co/halffried/midas_v3_1_dpt_swin2_large_384/"
-    "resolve/bff19fa1d6bc502560dc02c7d93d58bf5da12104/"
-    "dpt_swin2_large_384.pt"
-)
+MODEL_PATH = "dpt_swin2_large_384.pt"
 
-CACHE_DIR = "/tmp/midas"
-MODEL_PATH = os.path.join(CACHE_DIR, "dpt_swin2_large_384.pt")
-
-
-def ensure_model():
-    os.makedirs(CACHE_DIR, exist_ok=True)
-
-    if not os.path.exists(MODEL_PATH):
-        print("⬇️ Downloading MiDaS weights...")
-        r = requests.get(HF_MODEL_URL)
-        r.raise_for_status()
-        with open(MODEL_PATH, "wb") as f:
-            f.write(r.content)
-
-    return MODEL_PATH
+_device = torch.device("cpu")
+_model = None
+_transform = None
 
 
 def load_midas_model():
-    device = torch.device("cpu")
+    global _model, _transform
 
+    if _model is not None:
+        return _model, _transform
+
+    # Load model architecture (LOCAL midas/)
     model = DPTDepthModel(
         path=None,
         backbone="swin2_large_384",
-        non_negative=True
+        non_negative=True,
     )
 
-    state = torch.load(ensure_model(), map_location=device)
-    model.load_state_dict(state, strict=True)
-
-    model.to(device)
+    # Load weights
+    state_dict = torch.load(MODEL_PATH, map_location=_device)
+    model.load_state_dict(state_dict)
+    model.to(_device)
     model.eval()
 
-    return model
+    transform = Compose(
+        [
+            Resize(
+                384,
+                384,
+                resize_target=None,
+                keep_aspect_ratio=True,
+                ensure_multiple_of=32,
+                resize_method="minimal",
+                image_interpolation_method=cv2.INTER_CUBIC,
+            ),
+            NormalizeImage(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
+            PrepareForNet(),
+        ]
+    )
+
+    _model = model
+    _transform = transform
+    return _model, _transform
+
+
+def predict_depth(image_bgr: np.ndarray) -> np.ndarray:
+    model, transform = load_midas_model()
+
+    image_rgb = cv2.cvtColor(image_bgr, cv2.COLOR_BGR2RGB)
+    input_batch = transform({"image": image_rgb})["image"]
+    input_batch = torch.from_numpy(input_batch).unsqueeze(0).to(_device)
+
+    with torch.no_grad():
+        prediction = model(input_batch)
+        prediction = torch.nn.functional.interpolate(
+            prediction.unsqueeze(1),
+            size=image_rgb.shape[:2],
+            mode="bicubic",
+            align_corners=False,
+        ).squeeze()
+
+    depth = prediction.cpu().numpy()
+    return depth
