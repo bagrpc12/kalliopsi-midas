@@ -1,14 +1,11 @@
 from fastapi import FastAPI, UploadFile, File
-from model_utils import load_midas_model
-import cv2
+from fastapi.responses import Response
 import numpy as np
-import torch
-from PIL import Image
-import io
+import cv2
 
-app = FastAPI()
+from model_utils import predict_depth
 
-MODEL = load_midas_model()
+app = FastAPI(title="MiDaS Depth API")
 
 
 @app.get("/")
@@ -16,28 +13,20 @@ def root():
     return {"status": "ok"}
 
 
-@app.get("/healthz")
-def healthz():
-    return {"status": "healthy"}
-
-
 @app.post("/depth")
 async def depth_estimation(file: UploadFile = File(...)):
-    image_bytes = await file.read()
-    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-    image = np.array(image)
+    contents = await file.read()
+    np_arr = np.frombuffer(contents, np.uint8)
+    image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 
-    img = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    img = cv2.resize(img, (384, 384))
-    img = img.astype(np.float32) / 255.0
-    img = torch.from_numpy(img).permute(2, 0, 1).unsqueeze(0)
+    if image is None:
+        return {"error": "Invalid image"}
 
-    with torch.no_grad():
-        depth = MODEL(img)
+    depth = predict_depth(image)
 
-    depth = depth.squeeze().cpu().numpy()
+    # Normalize to 0–255 for visualization
+    depth_norm = cv2.normalize(depth, None, 0, 255, cv2.NORM_MINMAX)
+    depth_uint8 = depth_norm.astype(np.uint8)
 
-    return {
-        "min_depth": float(depth.min()),
-        "max_depth": float(depth.max())
-    }
+    _, encoded = cv2.imencode(".png", depth_uint8)
+    return Response(content=encoded.tobytes(), media_type="image/png")
