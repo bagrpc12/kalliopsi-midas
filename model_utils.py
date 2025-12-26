@@ -2,7 +2,7 @@ import os
 import torch
 import requests
 
-HF_MODEL_URL = "https://huggingface.co/halffried/midas_v3_1_dpt_swin2_large_384/resolve/main/dpt_swin2_large_384.pt"
+HF_MODEL_URL = "https://huggingface.co/halffried/midas_v3_1_dpt_swin2_large_384/resolve/bff19fa1d6bc502560dc02c7d93d58bf5da12104/dpt_swin2_large_384.pt"
 
 CACHE_DIR = "/tmp/midas_models"
 MODEL_FILENAME = "dpt_swin2_large_384.pt"
@@ -37,3 +37,4 @@ def load_midas_model(device="cpu"):
     model.to(device)
     model.eval()
     return model
+
