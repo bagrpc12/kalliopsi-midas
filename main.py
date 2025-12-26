@@ -1,8 +1,11 @@
 from fastapi import FastAPI, UploadFile, File
-from fastapi.responses import Response
+from PIL import Image
+import io
+import numpy as np
+
 from model_utils import predict_depth
 
-app = FastAPI(title="Kalliopsi MiDaS API")
+app = FastAPI()
 
 
 @app.get("/")
@@ -13,9 +16,12 @@ def root():
 @app.post("/depth")
 async def depth_estimation(file: UploadFile = File(...)):
     image_bytes = await file.read()
-    depth_map = predict_depth(image_bytes)
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
-    return Response(
-        content=depth_map.tobytes(),
-        media_type="image/png"
-    )
+    depth = predict_depth(image)
+
+    return {
+        "depth_shape": depth.shape,
+        "depth_min": float(depth.min()),
+        "depth_max": float(depth.max()),
+    }
