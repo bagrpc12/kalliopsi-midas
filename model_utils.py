@@ -3,8 +3,8 @@ import torch
 import requests
 
 # URL του μοντέλου από Hugging Face
-HF_MODEL_URL = "https://huggingface.co/intel-isl/MiDaS/resolve/main/dpt_hybrid-d0508457.pt"
-MODEL_FILENAME = "dpt_hybrid-d0508457.pt"
+HF_MODEL_URL = "https://huggingface.co/halffried/midas_v3_1_dpt_swin2_large_384/blob/main/dpt_swin2_large_384.pt"
+MODEL_FILENAME = "dpt_swin2_large_384.pt"
 CACHE_DIR = "/tmp/midas_models"
 
 # Τελική διαδρομή για το αρχείο μοντέλου
@@ -32,3 +32,4 @@ def load_midas_model(path, device):
     model.to(device)
     model.eval()
     return model
+
