@@ -1,6 +1,10 @@
 import os
 import torch
 import requests
+from midas.dpt_depth import DPTDepthModel
+from midas.transforms import Resize, NormalizeImage, PrepareForNet
+import cv2
+import numpy as np
 
 HF_MODEL_URL = (
     "https://huggingface.co/halffried/midas_v3_1_dpt_swin2_large_384/"
@@ -28,10 +32,10 @@ def ensure_model():
 def load_midas_model():
     device = torch.device("cpu")
 
-    model = torch.hub.load(
-        "isl-org/MiDaS",
-        "DPT_Swin2_Large_384",
-        pretrained=False
+    model = DPTDepthModel(
+        path=None,
+        backbone="swin2_large_384",
+        non_negative=True
     )
 
     state = torch.load(ensure_model(), map_location=device)
@@ -39,4 +43,5 @@ def load_midas_model():
 
     model.to(device)
     model.eval()
+
     return model
