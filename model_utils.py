@@ -42,7 +42,6 @@ def load_midas_model():
 
 
 def predict_depth(image_bytes: bytes):
-    model = load_midas_model()
 
     image = cv2.imdecode(
         np.frombuffer(image_bytes, np.uint8),
@@ -89,3 +88,4 @@ class ComposeTransforms:
         for t in self.transforms:
             img = t({"image": img})["image"]
         return img
+
