@@ -5,6 +5,7 @@ torchvision==0.24.1+cpu
 
 fastapi
 uvicorn
+python-multipart
 opencv-python-headless
 numpy
 pillow
