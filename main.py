@@ -1,54 +1,48 @@
-from fastapi import FastAPI, UploadFile
-from fastapi.responses import JSONResponse
+from fastapi import FastAPI, UploadFile, File
+from model_utils import ensure_model, load_midas_model
+import torch
 import numpy as np
 import cv2
 from PIL import Image
 import io
-import base64
-import torch
-import torchvision.transforms as T
-import os
 
-from model_utils import load_midas_model, ensure_model
+app = FastAPI()
 
-app = FastAPI(title="Kalliopsi MiDaS API")
+MODEL = None
 
-# βεβαιωνόμαστε ότι υπάρχει το μοντέλο τοπικά
-MODEL = ensure_model()
+def get_model():
+    global MODEL
+    if MODEL is None:
+        model_path = ensure_model()
+        MODEL = load_midas_model(model_path)
+    return MODEL
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-midas = load_midas_model(MODEL, device)
-transform = T.Compose([
-    T.Resize(256),
-    T.ToTensor(),
-    T.Normalize(mean=[0.5,0.5,0.5], std=[0.5,0.5,0.5])
-])
 
-@app.post("/depth")
-async def depth(file: UploadFile):
-    contents = await file.read()
-    img = Image.open(io.BytesIO(contents)).convert("RGB")
-    w, h = img.size
-
-    input_tensor = transform(img).unsqueeze(0).to(device)
-
-    with torch.no_grad():
-        pred = midas(input_tensor)
-        pred = torch.nn.functional.interpolate(
-            pred.unsqueeze(1),
-            size=(h, w),
-            mode="bicubic",
-            align_corners=False
-        ).squeeze()
-
-    depth = pred.cpu().numpy()
-    depth = cv2.normalize(depth, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
-
-    _, buf = cv2.imencode(".png", depth)
-    b64 = base64.b64encode(buf).decode("utf-8")
-    return JSONResponse({"depth_map": b64})
-
-@app.get("/health")
+@app.get("/")
 def health():
     return {"status": "ok"}
 
+
+@app.post("/depth")
+async def depth_estimation(file: UploadFile = File(...)):
+    model = get_model()
+
+    image_bytes = await file.read()
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+    image = np.array(image)
+
+    image = cv2.resize(image, (384, 384))
+    image = image / 255.0
+    image = torch.from_numpy(image).permute(2, 0, 1).unsqueeze(0).float()
+
+    with torch.no_grad():
+        prediction = model(image)
+        depth = prediction.squeeze().cpu().numpy()
+
+    depth_min = depth.min()
+    depth_max = depth.max()
+    depth = (depth - depth_min) / (depth_max - depth_min + 1e-6)
+    depth = (depth * 255).astype(np.uint8)
+
+    _, buffer = cv2.imencode(".png", depth)
+    return buffer.tobytes()
