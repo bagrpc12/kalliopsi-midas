@@ -1,8 +1,10 @@
 fastapi
 uvicorn
-torch==2.9.1+cpu
-torchvision==0.24.1+cpu
-opencv-python-headless
+torch==2.9.1
+torchvision==0.24.1
 numpy
+opencv-python-headless
+pillow
 requests
 python-multipart
+timm
