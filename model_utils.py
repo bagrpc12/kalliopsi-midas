@@ -2,19 +2,24 @@ import os
 import torch
 import requests
 
-HF_MODEL_URL = "https://huggingface.co/halffried/midas_v3_1_dpt_swin2_large_384/resolve/bff19fa1d6bc502560dc02c7d93d58bf5da12104/dpt_swin2_large_384.pt"
+# ΣΤΑΘΕΡΟ, PINNED, PUBLIC LINK (ΔΕΝ ΣΠΑΕΙ)
+HF_MODEL_URL = (
+    "https://huggingface.co/halffried/"
+    "midas_v3_1_dpt_swin2_large_384/"
+    "resolve/bff19fa1d6bc502560dc02c7d93d58bf5da12104/"
+    "dpt_swin2_large_384.pt"
+)
 
-CACHE_DIR = "/tmp/midas_models"
 MODEL_FILENAME = "dpt_swin2_large_384.pt"
+CACHE_DIR = "/tmp/midas_models"
 MODEL_PATH = os.path.join(CACHE_DIR, MODEL_FILENAME)
 
-
-def ensure_model():
+def ensure_model() -> str:
     os.makedirs(CACHE_DIR, exist_ok=True)
 
     if not os.path.exists(MODEL_PATH):
         print("Downloading MiDaS model...")
-        r = requests.get(HF_MODEL_URL, stream=True)
+        r = requests.get(HF_MODEL_URL, stream=True, timeout=120)
         r.raise_for_status()
 
         with open(MODEL_PATH, "wb") as f:
@@ -25,16 +30,18 @@ def ensure_model():
     return MODEL_PATH
 
 
-def load_midas_model(device="cpu"):
+def load_midas_model(path: str):
+    device = torch.device("cpu")
+
     model = torch.hub.load(
         "isl-org/MiDaS",
         "DPT_Swin2_Large_384",
         pretrained=False
     )
 
-    state_dict = torch.load(MODEL_PATH, map_location=device)
+    state_dict = torch.load(path, map_location=device)
     model.load_state_dict(state_dict)
     model.to(device)
     model.eval()
-    return model
 
+    return model
